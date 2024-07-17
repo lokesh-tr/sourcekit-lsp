@@ -198,11 +198,16 @@ final class ExecuteCommandTests: XCTestCase {
 
     let options = SourceKitLSPOptions.testDefault(experimentalFeatures: [.showMacroExpansions])
 
-    for peekDocuments in [false, true] {
+    for (getReferenceDocument, peekDocuments) in [
+      (false, false), (false, true), (true, false), (true, true),
+    ] {
       let project = try await SwiftPMTestProject(
         files: files,
         manifest: SwiftPMTestProject.macroPackageManifest,
-        capabilities: ClientCapabilities(experimental: ["workspace/peekDocuments": .bool(peekDocuments)]),
+        capabilities: ClientCapabilities(experimental: [
+          "workspace/peekDocuments": .bool(peekDocuments),
+          "workspace/getReferenceDocument": .bool(getReferenceDocument),
+        ]),
         options: options,
         enableBackgroundIndexing: true
       )
@@ -229,7 +234,7 @@ final class ExecuteCommandTests: XCTestCase {
 
         let request = ExecuteCommandRequest(command: command.command, arguments: command.arguments)
 
-        if peekDocuments {
+        if peekDocuments && getReferenceDocument {
           let expectation = self.expectation(description: "Handle Peek Documents Request")
           let peekDocumentsRequestURIs = ThreadSafeBox<[DocumentURI]?>(initialValue: nil)
 
@@ -243,17 +248,17 @@ final class ExecuteCommandTests: XCTestCase {
 
           try await fulfillmentOfOrThrow([expectation])
 
-          let urls = try XCTUnwrap(
-            peekDocumentsRequestURIs.value?.map {
-              return try XCTUnwrap(
-                $0.fileURL,
-                "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
-              )
-            },
+          let uris = try XCTUnwrap(
+            peekDocumentsRequestURIs.value,
             "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )
 
-          let filesContents = try urls.map { try String(contentsOf: $0, encoding: .utf8) }
+          var filesContents = [String]()
+          for uri in uris {
+            let result = try await project.testClient.send(GetReferenceDocumentRequest(uri: uri))
+
+            filesContents.append(result.content)
+          }
 
           XCTAssertEqual(
             filesContents.only,
@@ -261,9 +266,16 @@ final class ExecuteCommandTests: XCTestCase {
             "File doesn't contain macro expansion. Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )
 
+          let urls = try uris.map {
+            try XCTUnwrap(
+              URL(string: $0.stringValue),
+              "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
+            )
+          }
+
           XCTAssertEqual(
             urls.only?.lastPathComponent,
-            "MyMacroClient_L5C3-L5C20.swift",
+            "L5C3-L5C20.swift",
             "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )
         } else {
@@ -370,11 +382,16 @@ final class ExecuteCommandTests: XCTestCase {
 
     let options = SourceKitLSPOptions.testDefault(experimentalFeatures: [.showMacroExpansions])
 
-    for peekDocuments in [false, true] {
+    for (getReferenceDocument, peekDocuments) in [
+      (false, false), (false, true), (true, false), (true, true),
+    ] {
       let project = try await SwiftPMTestProject(
         files: files,
         manifest: SwiftPMTestProject.macroPackageManifest,
-        capabilities: ClientCapabilities(experimental: ["workspace/peekDocuments": .bool(peekDocuments)]),
+        capabilities: ClientCapabilities(experimental: [
+          "workspace/peekDocuments": .bool(peekDocuments),
+          "workspace/getReferenceDocument": .bool(getReferenceDocument),
+        ]),
         options: options,
         enableBackgroundIndexing: true
       )
@@ -401,7 +418,7 @@ final class ExecuteCommandTests: XCTestCase {
 
         let request = ExecuteCommandRequest(command: command.command, arguments: command.arguments)
 
-        if peekDocuments {
+        if peekDocuments && getReferenceDocument {
           let expectation = self.expectation(description: "Handle Peek Documents Request")
 
           let peekDocumentsRequestURIs = ThreadSafeBox<[DocumentURI]?>(initialValue: nil)
@@ -416,17 +433,17 @@ final class ExecuteCommandTests: XCTestCase {
 
           try await fulfillmentOfOrThrow([expectation])
 
-          let urls = try XCTUnwrap(
-            peekDocumentsRequestURIs.value?.map {
-              return try XCTUnwrap(
-                $0.fileURL,
-                "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
-              )
-            },
+          let uris = try XCTUnwrap(
+            peekDocumentsRequestURIs.value,
             "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )
 
-          let filesContents = try urls.map { try String(contentsOf: $0, encoding: .utf8) }
+          var filesContents = [String]()
+          for uri in uris {
+            let result = try await project.testClient.send(GetReferenceDocumentRequest(uri: uri))
+
+            filesContents.append(result.content)
+          }
 
           XCTAssertEqual(
             filesContents,
@@ -438,12 +455,19 @@ final class ExecuteCommandTests: XCTestCase {
             "Files doesn't contain correct macro expansion. Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )
 
+          let urls = try uris.map {
+            try XCTUnwrap(
+              URL(string: $0.stringValue),
+              "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
+            )
+          }
+
           XCTAssertEqual(
             urls.map { $0.lastPathComponent },
             [
-              "MyMacroClient_L7C3-L7C3.swift",
-              "MyMacroClient_L8C3-L8C3.swift",
-              "MyMacroClient_L9C1-L9C1.swift",
+              "L7C3-L7C3.swift",
+              "L8C3-L8C3.swift",
+              "L9C1-L9C1.swift",
             ],
             "Failed for position range between \(positionMarker.start) and \(positionMarker.end)"
           )

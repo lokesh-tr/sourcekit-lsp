@@ -980,6 +980,17 @@ extension SwiftLanguageService {
 
     return nil
   }
+
+  public func getReferenceDocument(_ req: GetReferenceDocumentRequest) async throws -> GetReferenceDocumentResponse {
+    let referenceDocumentURL = try ReferenceDocumentURL(from: req.uri)
+
+    switch referenceDocumentURL {
+    case var .macroExpansion(data):
+      let content = try await expandMacro(macroExpansionURLData: &data)
+
+      return GetReferenceDocumentResponse(content: content)
+    }
+  }
 }
 
 extension SwiftLanguageService: SKDNotificationHandler {

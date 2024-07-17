@@ -77,7 +77,8 @@ package final class Workspace: Sendable {
   private let documentManager: DocumentManager
 
   /// Language service for an open document, if available.
-  let documentService: ThreadSafeBox<[DocumentURI: LanguageService]> = ThreadSafeBox(initialValue: [:])
+  private let documentService: ThreadSafeBox<[DocumentURI: LanguageService]> = ThreadSafeBox(
+    initialValue: [:])
 
   /// The `SemanticIndexManager` that keeps track of whose file's index is up-to-date in the workspace and schedules
   /// indexing and preparation tasks for files with out-of-date index.
@@ -254,6 +255,23 @@ package final class Workspace: Sendable {
     await buildSystemManager.filesDidChange(events)
     await syntacticTestIndex.filesDidChange(events)
     await semanticIndexManager?.filesDidChange(events)
+  }
+
+  func documentService(for uri: DocumentURI) -> LanguageService? {
+    return documentService.value[uri]
+  }
+
+  /// Set a language service for a document uri only if it doesn't already exist.
+  /// - Returns: The language service of the given `uri`
+  func documentService(for uri: DocumentURI, newLanguageService: any LanguageService) -> LanguageService {
+    return documentService.withLock { service in
+      if let languageService = service[uri] {
+        return languageService
+      }
+
+      service[uri] = newLanguageService
+      return newLanguageService
+    }
   }
 }
 
