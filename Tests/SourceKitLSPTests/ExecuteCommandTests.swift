@@ -156,8 +156,8 @@ final class ExecuteCommandTests: XCTestCase {
   }
 
   func testFreestandingMacroExpansion() async throws {
-    try await SkipUnless.canBuildMacroUsingSwiftSyntaxFromSourceKitLSPBuild()
-    try await SkipUnless.swiftPMSupportsExperimentalPrepareForIndexing()
+    // try await SkipUnless.canBuildMacroUsingSwiftSyntaxFromSourceKitLSPBuild()
+    // try await SkipUnless.swiftPMSupportsExperimentalPrepareForIndexing()
 
     let files: [RelativeFileLocation: String] = [
       "MyMacros/MyMacros.swift": #"""
@@ -320,8 +320,8 @@ final class ExecuteCommandTests: XCTestCase {
   }
 
   func testAttachedMacroExpansion() async throws {
-    try await SkipUnless.canBuildMacroUsingSwiftSyntaxFromSourceKitLSPBuild()
-    try await SkipUnless.swiftPMSupportsExperimentalPrepareForIndexing()
+    // try await SkipUnless.canBuildMacroUsingSwiftSyntaxFromSourceKitLSPBuild()
+    // try await SkipUnless.swiftPMSupportsExperimentalPrepareForIndexing()
 
     let files: [RelativeFileLocation: String] = [
       "MyMacros/MyMacros.swift": #"""

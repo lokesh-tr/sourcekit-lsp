@@ -76,7 +76,15 @@ extension SwiftLanguageService {
   package func documentSemanticTokens(
     _ req: DocumentSemanticTokensRequest
   ) async throws -> DocumentSemanticTokensResponse? {
-    let snapshot = try self.documentManager.latestSnapshot(req.textDocument.uri)
+    var uri: DocumentURI
+    if let referenceDocumentURL = try? ReferenceDocumentURL(from: req.textDocument.uri),
+     case let .macroExpansion(data) = referenceDocumentURL {
+      uri = try DocumentURI(string: data.sourceFileURL.absoluteString)
+     } else {
+      uri = req.textDocument.uri
+     }
+
+    let snapshot = try self.documentManager.latestSnapshot(uri)
 
     let tokens = try await mergedAndSortedTokens(for: snapshot)
     let encodedTokens = tokens.lspEncoded
@@ -93,7 +101,15 @@ extension SwiftLanguageService {
   package func documentSemanticTokensRange(
     _ req: DocumentSemanticTokensRangeRequest
   ) async throws -> DocumentSemanticTokensResponse? {
-    let snapshot = try self.documentManager.latestSnapshot(req.textDocument.uri)
+    var uri: DocumentURI
+    if let referenceDocumentURL = try? ReferenceDocumentURL(from: req.textDocument.uri),
+     case let .macroExpansion(data) = referenceDocumentURL {
+      uri = try DocumentURI(string: data.sourceFileURL.absoluteString)
+     } else {
+      uri = req.textDocument.uri
+     }
+
+    let snapshot = try self.documentManager.latestSnapshot(uri)
     let tokens = try await mergedAndSortedTokens(for: snapshot, in: req.range)
     let encodedTokens = tokens.lspEncoded
 

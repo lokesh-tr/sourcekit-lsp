@@ -373,12 +373,20 @@ package actor SourceKitLSPServer {
   ) async {
     await request.reply {
       let request = request.params
-      let doc = request.textDocument.uri
-      guard let workspace = await self.workspaceForDocument(uri: request.textDocument.uri) else {
-        throw ResponseError.workspaceNotOpen(request.textDocument.uri)
+      var doc: DocumentURI
+
+      if let referenceDocumentURL = try? ReferenceDocumentURL(from: request.textDocument.uri),
+     case let .macroExpansion(data) = referenceDocumentURL {
+      doc = try DocumentURI(string: data.sourceFileURL.absoluteString)
+     } else {
+      doc = request.textDocument.uri
+     }
+
+      guard let workspace = await self.workspaceForDocument(uri: doc) else {
+        throw ResponseError.workspaceNotOpen(doc)
       }
       guard let languageService = workspace.documentService(for: doc) else {
-        throw ResponseError.unknown("No language service for '\(request.textDocument.uri)' found")
+        throw ResponseError.unknown("No language service for '\(doc)' found")
       }
       return try await requestHandler(request, workspace, languageService)
     }

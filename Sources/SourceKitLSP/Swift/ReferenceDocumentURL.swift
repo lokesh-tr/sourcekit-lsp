@@ -37,7 +37,7 @@ package enum ReferenceDocumentURL {
   }
 
   init(from uri: DocumentURI) throws {
-    guard let url = URL(string: uri.stringValue) else {
+    guard let urlString = uri.stringValue.removingPercentEncoding, let url = URL(string: urlString) else {
       throw ReferenceDocumentURLError(description: "Unable to parse URL from document URI")
     }
 

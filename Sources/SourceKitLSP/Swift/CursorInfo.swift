@@ -148,14 +148,26 @@ extension SwiftLanguageService {
 
     let keys = self.keys
 
-    let skreq = sourcekitd.dictionary([
+    var skreqdict: [sourcekitd_api_uid_t : any SKDRequestValue] = [
       keys.request: requests.cursorInfo,
       keys.cancelOnSubsequentRequest: 0,
       keys.offset: offsetRange.lowerBound,
-      keys.length: offsetRange.upperBound != offsetRange.lowerBound ? offsetRange.count : nil,
-      keys.sourceFile: snapshot.uri.pseudoPath,
-      keys.compilerArgs: await self.buildSettings(for: uri)?.compilerArgs as [SKDRequestValue]?,
-    ])
+      keys.length: offsetRange.upperBound != offsetRange.lowerBound ? offsetRange.count : nil
+    ]
+
+    if let referenceDocumentURL = try? ReferenceDocumentURL(from: snapshot.uri),
+     case let .macroExpansion(data) = referenceDocumentURL {
+      let primaryFileURI = try DocumentURI(string: data.sourceFileURL.absoluteString)
+
+      skreqdict[keys.sourceFile] = data.bufferName
+      skreqdict[keys.primaryFile] = primaryFileURI.pseudoPath
+      skreqdict[keys.compilerArgs] = await self.buildSettings(for: primaryFileURI)?.compilerArgs as [SKDRequestValue]?
+    } else {
+      skreqdict[keys.sourceFile] = snapshot.uri.pseudoPath
+      skreqdict[keys.compilerArgs] = await self.buildSettings(for: uri)?.compilerArgs as [SKDRequestValue]?
+    }
+
+    let skreq = sourcekitd.dictionary(skreqdict)
 
     appendAdditionalParameters?(skreq)
 

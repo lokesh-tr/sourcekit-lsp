@@ -448,7 +448,8 @@ var dependencies: [Package.Dependency] {
 
     return [
       .package(url: "https://github.com/swiftlang/indexstore-db.git", branch: relatedDependenciesBranch),
-      .package(url: "https://github.com/swiftlang/swift-package-manager.git", branch: relatedDependenciesBranch),
+      // .package(url: "https://github.com/swiftlang/swift-package-manager.git", branch: relatedDependenciesBranch),
+      .package(path: "../swift-package-manager"),
       .package(url: "https://github.com/apple/swift-tools-support-core.git", branch: relatedDependenciesBranch),
       .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.4.0"),
       .package(url: "https://github.com/swiftlang/swift-syntax.git", branch: relatedDependenciesBranch),

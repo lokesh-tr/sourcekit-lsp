@@ -448,14 +448,16 @@ extension SwiftLanguageService {
   }
 
   package func openDocument(_ notification: DidOpenTextDocumentNotification, snapshot: DocumentSnapshot) async {
-    cancelInFlightPublishDiagnosticsTask(for: notification.textDocument.uri)
-    await diagnosticReportManager.removeItemsFromCache(with: notification.textDocument.uri)
+    if snapshot.uri.scheme == "file" {
+      cancelInFlightPublishDiagnosticsTask(for: notification.textDocument.uri)
+      await diagnosticReportManager.removeItemsFromCache(with: notification.textDocument.uri)
 
-    let buildSettings = await self.buildSettings(for: snapshot.uri)
+      let buildSettings = await self.buildSettings(for: snapshot.uri)
 
-    let req = openDocumentSourcekitdRequest(snapshot: snapshot, compileCommand: buildSettings)
-    _ = try? await self.sendSourcekitdRequest(req, fileContents: snapshot.text)
-    await publishDiagnosticsIfNeeded(for: notification.textDocument.uri)
+      let req = openDocumentSourcekitdRequest(snapshot: snapshot, compileCommand: buildSettings)
+      _ = try? await self.sendSourcekitdRequest(req, fileContents: snapshot.text)
+      await publishDiagnosticsIfNeeded(for: notification.textDocument.uri)
+    }
   }
 
   package func closeDocument(_ notification: DidCloseTextDocumentNotification) async {
@@ -935,9 +937,17 @@ extension SwiftLanguageService {
 
   package func documentDiagnostic(_ req: DocumentDiagnosticsRequest) async throws -> DocumentDiagnosticReport {
     do {
-      await semanticIndexManager?.prepareFileForEditorFunctionality(req.textDocument.uri)
+      var uri: DocumentURI
+      if let referenceDocumentURL = try? ReferenceDocumentURL(from: req.textDocument.uri),
+      case let .macroExpansion(data) = referenceDocumentURL {
+        uri = try DocumentURI(string: data.sourceFileURL.absoluteString)    
+      } else {
+        uri = req.textDocument.uri
+      }
+
+      await semanticIndexManager?.prepareFileForEditorFunctionality(uri)
       let snapshot = try documentManager.latestSnapshot(req.textDocument.uri)
-      let buildSettings = await self.buildSettings(for: req.textDocument.uri)
+      let buildSettings = await self.buildSettings(for: uri)
       let diagnosticReport = try await self.diagnosticReportManager.diagnosticReport(
         for: snapshot,
         buildSettings: buildSettings
